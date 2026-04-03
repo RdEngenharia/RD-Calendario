@@ -8,10 +8,128 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563eb">
     <link rel="icon" href="https://picsum.photos/seed/calendar/32/32">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Tela de Login -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-black text-blue-600 tracking-tighter">RD Calendário</h1>
+                <p class="text-slate-500 mt-2">Sua agenda pessoal simplificada</p>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Email</label>
+                    <input type="email" id="login-email" required class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="seu@email.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Senha</label>
+                    <input type="password" id="login-password" required class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="••••••••">
+                </div>
+                <div id="login-error" class="text-red-500 text-sm hidden bg-red-50 p-3 rounded-lg border border-red-100"></div>
+                <button type="submit" id="btn-login-submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95">Entrar</button>
+                <button type="button" id="btn-toggle-auth" class="w-full text-blue-600 font-semibold text-sm hover:underline">Não tem conta? Cadastre-se</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tela do Calendário (Oculta por padrão) -->
+    <div id="calendar-screen" class="hidden min-h-screen flex flex-col">
+        <header class="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-10">
+            <div class="max-w-7xl mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl font-black text-blue-600 tracking-tighter">RD Calendário</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="user-display" class="hidden sm:inline text-sm font-medium text-slate-600"></span>
+                    <button id="btn-logout" class="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors" title="Sair">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div class="flex items-center gap-4">
+                    <h2 id="month-year" class="text-2xl font-bold text-slate-800 min-w-[180px]">Janeiro 2024</h2>
+                    <div class="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                        <button id="prev-month" class="p-2 hover:bg-slate-50 border-r border-slate-200 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                        </button>
+                        <button id="today-btn" class="px-4 py-2 text-sm font-bold hover:bg-slate-50 transition-colors">Hoje</button>
+                        <button id="next-month" class="p-2 hover:bg-slate-50 border-l border-slate-200 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                    </div>
+                </div>
+                <button id="btn-new-event" class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    Novo Evento
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
+                <div class="grid grid-cols-7 bg-slate-50/50 border-b border-slate-200">
+                    <div class="py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Dom</div>
+                    <div class="py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Seg</div>
+                    <div class="py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Ter</div>
+                    <div class="py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Qua</div>
+                    <div class="py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Qui</div>
+                    <div class="py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Sex</div>
+                    <div class="py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Sáb</div>
+                </div>
+                <div id="calendar-grid" class="grid grid-cols-7">
+                    <!-- Dias gerados via JS -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Evento -->
+    <div id="event-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm modal-overlay"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
+            <h3 class="text-2xl font-bold text-slate-800 mb-1">Novo Evento</h3>
+            <p id="selected-date-text" class="text-slate-500 text-sm mb-6"></p>
+
+            <form id="event-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Título</label>
+                    <input type="text" id="event-title" required class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Ex: Dentista">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Hora</label>
+                    <input type="time" id="event-time" required class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                </div>
+                <div id="pdf-upload-container">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Anexo PDF (Opcional)</label>
+                    <input type="file" id="event-pdf" accept="application/pdf" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all">
+                </div>
+                <div id="pdf-view-container" class="hidden py-2 px-4 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-between">
+                    <span class="text-sm font-medium text-blue-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Documento Anexado
+                    </span>
+                    <a id="pdf-link" href="#" target="_blank" class="text-xs font-bold bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-all">Visualizar</a>
+                </div>
+                <div id="upload-progress" class="hidden w-full bg-slate-100 rounded-full h-1.5 mt-2">
+                    <div class="bg-blue-600 h-1.5 rounded-full animate-pulse" style="width: 100%"></div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" class="flex-1 px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-all close-modal">Cancelar</button>
+                    <button type="submit" id="btn-save-event" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="/src/app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

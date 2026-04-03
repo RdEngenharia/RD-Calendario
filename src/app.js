@@ -14,33 +14,39 @@ const firebaseConfig = {
   measurementId: "G-MD6LVVQMGM"
 };
 
-// Inicialização
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// --- Estado da Aplicação ---
+// --- Estado ---
 let currentUser = null;
 let currentViewDate = new Date();
-let selectedDate = null;
+let selectedDate = new Date();
 let events = [];
+let authMode = 'login';
 
-// --- Elementos do DOM ---
+// --- Elementos DOM ---
 const loginScreen = document.getElementById('login-screen');
 const calendarScreen = document.getElementById('calendar-screen');
 const loginForm = document.getElementById('login-form');
+const loginEmailInput = document.getElementById('login-email');
+const loginPasswordInput = document.getElementById('login-password');
 const loginError = document.getElementById('login-error');
-const btnSignup = document.getElementById('btn-signup');
-const btnLogout = document.getElementById('btn-logout');
+const btnLoginSubmit = document.getElementById('btn-login-submit');
+const btnToggleAuth = document.getElementById('btn-toggle-auth');
 const userDisplay = document.getElementById('user-display');
+const btnLogout = document.getElementById('btn-logout');
 const monthYearText = document.getElementById('month-year');
-const calendarGrid = document.getElementById('calendar-grid');
 const prevMonthBtn = document.getElementById('prev-month');
 const nextMonthBtn = document.getElementById('next-month');
 const todayBtn = document.getElementById('today-btn');
+const calendarGrid = document.getElementById('calendar-grid');
+const btnNewEvent = document.getElementById('btn-new-event');
 const eventModal = document.getElementById('event-modal');
 const eventForm = document.getElementById('event-form');
+const eventTitleInput = document.getElementById('event-title');
+const eventTimeInput = document.getElementById('event-time');
 const eventPdfInput = document.getElementById('event-pdf');
 const pdfUploadContainer = document.getElementById('pdf-upload-container');
 const pdfViewContainer = document.getElementById('pdf-view-container');
@@ -49,16 +55,14 @@ const uploadProgress = document.getElementById('upload-progress');
 const selectedDateText = document.getElementById('selected-date-text');
 const closeModalBtns = document.querySelectorAll('.close-modal, .modal-overlay');
 
-// --- Lógica de Autenticação ---
-
+// --- Autenticação ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
         userDisplay.textContent = user.email;
         loginScreen.classList.add('hidden');
         calendarScreen.classList.remove('hidden');
-        initEventsListener();
-        renderCalendar();
+        loadEvents();
     } else {
         currentUser = null;
         loginScreen.classList.remove('hidden');
@@ -66,200 +70,142 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    loginError.classList.add('hidden');
-
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-        loginError.textContent = "Erro ao entrar: " + error.message;
-        loginError.classList.remove('hidden');
-    }
+btnToggleAuth.addEventListener('click', () => {
+    authMode = authMode === 'login' ? 'signup' : 'login';
+    btnLoginSubmit.textContent = authMode === 'login' ? 'Entrar' : 'Cadastrar';
+    btnToggleAuth.textContent = authMode === 'login' ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entre';
 });
 
-btnSignup.addEventListener('click', async () => {
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    if (!email || !password) {
-        alert("Preencha email e senha para cadastrar.");
-        return;
-    }
-
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = loginEmailInput.value;
+    const password = loginPasswordInput.value;
     try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        alert("Conta criada com sucesso!");
+        if (authMode === 'login') {
+            await signInWithEmailAndPassword(auth, email, password);
+        } else {
+            await createUserWithEmailAndPassword(auth, email, password);
+        }
     } catch (error) {
-        alert("Erro ao cadastrar: " + error.message);
+        loginError.textContent = error.message;
+        loginError.classList.remove('hidden');
     }
 });
 
 btnLogout.addEventListener('click', () => signOut(auth));
 
-// --- Lógica do Calendário ---
-
+// --- Calendário ---
 function renderCalendar() {
     calendarGrid.innerHTML = '';
     const year = currentViewDate.getFullYear();
     const month = currentViewDate.getMonth();
+    monthYearText.textContent = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentViewDate);
 
-    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
 
-    // Nome do mês
-    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-    monthYearText.textContent = `${monthNames[month]} ${year}`;
-
-    // Dias do mês anterior (para preencher o grid)
-    for (let i = firstDayOfMonth - 1; i >= 0; i--) {
-        const day = daysInPrevMonth - i;
-        createDayElement(day, false, new Date(year, month - 1, day));
-    }
-
-    // Dias do mês atual
+    for (let i = firstDay; i > 0; i--) createDay(prevMonthDays - i + 1, false, true);
     for (let i = 1; i <= daysInMonth; i++) {
-        createDayElement(i, true, new Date(year, month, i));
+        const isToday = i === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
+        createDay(i, true, false, isToday);
     }
-
-    // Dias do próximo mês
-    const remainingCells = 42 - (firstDayOfMonth + daysInMonth);
-    for (let i = 1; i <= remainingCells; i++) {
-        createDayElement(i, false, new Date(year, month + 1, i));
-    }
+    const remaining = 42 - (firstDay + daysInMonth);
+    for (let i = 1; i <= remaining; i++) createDay(i, false, false);
 }
 
-function createDayElement(day, isCurrentMonth, date) {
+function createDay(day, isCurrent, isPrev, isToday) {
     const dayDiv = document.createElement('div');
-    dayDiv.className = `calendar-day p-2 border-r border-b border-slate-100 relative cursor-pointer ${isCurrentMonth ? '' : 'not-current'}`;
+    dayDiv.className = `min-h-[100px] p-2 border-r border-b border-slate-100 relative cursor-pointer hover:bg-blue-50/30 ${!isCurrent ? 'bg-slate-50/50 text-slate-400' : ''}`;
     
-    const isToday = new Date().toDateString() === date.toDateString();
-    if (isToday) dayDiv.classList.add('today');
-
+    const date = new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + (isPrev ? -1 : (isCurrent ? 0 : 1)), day);
     const dateStr = date.toISOString().split('T')[0];
-    
-    dayDiv.innerHTML = `<div class="day-number">${day}</div><div class="events-container space-y-1"></div>`;
-    
-    // Renderizar eventos deste dia
-    const container = dayDiv.querySelector('.events-container');
-    const dayEvents = events.filter(e => e.date === dateStr);
-    dayEvents.forEach(event => {
-        const eventEl = document.createElement('div');
-        eventEl.className = 'event-item';
-        eventEl.textContent = `${event.time} ${event.title}`;
-        
-        // Clique no evento para visualizar
-        eventEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openEventModal(date, event);
-        });
-        
-        container.appendChild(eventEl);
+
+    dayDiv.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white' : ''}">${day}</span>
+        </div>
+        <div class="space-y-1 overflow-y-auto max-h-[60px]" id="ev-${dateStr}"></div>
+    `;
+
+    const container = dayDiv.querySelector(`#ev-${dateStr}`);
+    events.filter(e => e.date === dateStr).forEach(event => {
+        const evEl = document.createElement('div');
+        evEl.className = 'text-[10px] p-1 bg-blue-50 text-blue-700 rounded border border-blue-100 truncate flex items-center gap-1';
+        evEl.innerHTML = `${event.pdfUrl ? '📄' : ''} <span>${event.time || ''} ${event.title}</span>`;
+        evEl.onclick = (e) => { e.stopPropagation(); openModal(date, event); };
+        container.appendChild(evEl);
     });
 
-    dayDiv.addEventListener('click', () => {
-        openEventModal(date);
-    });
-
+    dayDiv.onclick = () => openModal(date);
     calendarGrid.appendChild(dayDiv);
 }
 
-function openEventModal(date, event = null) {
+function openModal(date, event = null) {
     selectedDate = date;
-    selectedDateText.textContent = date.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    
-    // Resetar formulário
+    selectedDateText.textContent = date.toLocaleDateString('pt-BR', { dateStyle: 'full' });
     eventForm.reset();
     pdfUploadContainer.classList.remove('hidden');
     pdfViewContainer.classList.add('hidden');
-    uploadProgress.classList.add('hidden');
     
     if (event) {
-        // Modo Visualização/Edição (Simplificado para visualização conforme pedido)
-        document.getElementById('event-title').value = event.title;
-        document.getElementById('event-time').value = event.time;
-        
+        eventTitleInput.value = event.title;
+        eventTimeInput.value = event.time;
         if (event.pdfUrl) {
             pdfViewContainer.classList.remove('hidden');
-            pdfLink.href = event.pdfUrl;
-            pdfUploadContainer.classList.add('hidden'); // Ocultar upload se já tem PDF (opcional)
+            pdfUploadContainer.classList.add('hidden');
+            pdfLink.onclick = (e) => {
+                e.preventDefault();
+                window.open(event.pdfUrl, '_blank');
+            };
         }
-        
-        document.querySelector('#event-modal h3').textContent = "Detalhes do Evento";
-    } else {
-        document.querySelector('#event-modal h3').textContent = "Novo Evento";
     }
-    
     eventModal.classList.remove('hidden');
 }
 
-prevMonthBtn.addEventListener('click', () => {
-    currentViewDate.setMonth(currentViewDate.getMonth() - 1);
-    renderCalendar();
-});
-
-nextMonthBtn.addEventListener('click', () => {
-    currentViewDate.setMonth(currentViewDate.getMonth() + 1);
-    renderCalendar();
-});
-
-todayBtn.addEventListener('click', () => {
-    currentViewDate = new Date();
-    renderCalendar();
-});
-
-// --- Lógica de Eventos (Firestore) ---
-
-function initEventsListener() {
-    if (!currentUser) return;
+function loadEvents() {
     const q = query(collection(db, "events"), where("userId", "==", currentUser.uid));
-    onSnapshot(q, (snapshot) => {
-        events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    onSnapshot(q, (snap) => {
+        events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCalendar();
     });
 }
 
-eventForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const title = document.getElementById('event-title').value;
-    const time = document.getElementById('event-time').value;
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const pdfFile = eventPdfInput.files[0];
+// --- Eventos de UI ---
+prevMonthBtn.onclick = () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendar(); };
+nextMonthBtn.onclick = () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendar(); };
+todayBtn.onclick = () => { currentViewDate = new Date(); renderCalendar(); };
+btnNewEvent.onclick = () => openModal(new Date());
+closeModalBtns.forEach(b => b.onclick = () => eventModal.classList.add('hidden'));
 
+eventForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const pdfFile = eventPdfInput.files[0];
+    uploadProgress.classList.remove('hidden');
+    
     try {
         let pdfUrl = null;
-
-        // Upload do PDF se selecionado
         if (pdfFile) {
-            uploadProgress.classList.remove('hidden');
-            const fileName = `${Date.now()}_${pdfFile.name}`;
-            const storageRef = ref(storage, `comprovantes/${currentUser.uid}/${fileName}`);
-            
-            const snapshot = await uploadBytes(storageRef, pdfFile);
-            pdfUrl = await getDownloadURL(snapshot.ref);
-            uploadProgress.classList.add('hidden');
+            const storageRef = ref(storage, `comprovantes/${currentUser.uid}/${Date.now()}_${pdfFile.name}`);
+            const snap = await uploadBytes(storageRef, pdfFile);
+            pdfUrl = await getDownloadURL(snap.ref);
         }
 
         await addDoc(collection(db, "events"), {
-            title,
-            time,
-            date: dateStr,
+            title: eventTitleInput.value,
+            time: eventTimeInput.value,
+            date: selectedDate.toISOString().split('T')[0],
             userId: currentUser.uid,
             pdfUrl: pdfUrl,
             createdAt: serverTimestamp()
         });
         
         eventModal.classList.add('hidden');
-        eventForm.reset();
-    } catch (error) {
+    } catch (err) {
+        alert("Erro: " + err.message);
+    } finally {
         uploadProgress.classList.add('hidden');
-        alert("Erro ao salvar evento: " + error.message);
     }
-});
+};
 
-// --- Modais ---
-closeModalBtns.forEach(btn => {
-    btn.addEventListener('click', () => eventModal.classList.add('hidden'));
-});
+renderCalendar();
