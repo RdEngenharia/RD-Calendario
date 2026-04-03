@@ -1,0 +1,5 @@
+{
+  "name": "RD Calendário",
+  "description": "Sua agenda pessoal simplificada e eficiente.",
+  "requestFramePermissions": ["notifications"]
+}

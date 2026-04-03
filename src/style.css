@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* Custom Styles */
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+}
+
+body {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.calendar-day {
+    min-height: 100px;
+    transition: background-color 0.2s;
+}
+
+@media (min-width: 640px) {
+    .calendar-day {
+        min-height: 140px;
+    }
+}
+
+.calendar-day:hover {
+    background-color: rgba(37, 99, 235, 0.05);
+}
+
+.calendar-day.not-current {
+    background-color: rgba(248, 250, 252, 0.5);
+    color: #94a3b8;
+}
+
+.calendar-day.today .day-number {
+    background-color: var(--primary);
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+
+.day-number {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+}
+
+.event-item {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #dbeafe;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.modal-overlay {
+    backdrop-filter: blur(4px);
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+    body.auto-dark {
+        background-color: #0f172a;
+        color: #f1f5f9;
+    }
+    body.auto-dark .bg-white {
+        background-color: #1e293b;
+        border-color: #334155;
+    }
+    body.auto-dark .text-slate-800 { color: #f1f5f9; }
+    body.auto-dark .text-slate-700 { color: #cbd5e1; }
+    body.auto-dark .bg-slate-50 { background-color: #0f172a; }
+    body.auto-dark .border-slate-200 { border-color: #334155; }
+    body.auto-dark .calendar-day:hover { background-color: rgba(37, 99, 235, 0.1); }
+    body.auto-dark .event-item { background-color: #1e3a8a; color: #bfdbfe; border-color: #1e40af; }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
