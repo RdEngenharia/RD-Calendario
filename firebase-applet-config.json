@@ -1,10 +1,9 @@
 {
-  "projectId": "usina-rd-solar",
-  "appId": "1:509541158775:web:0695c00045cf9837069b72",
-  "apiKey": "AIzaSyAIrmFfKlMNmTS8YR_cRPbnfY5hEzfqOuw",
-  "authDomain": "usina-rd-solar.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-c50beff0-d10c-433d-947f-20a1bc06fcbf",
-  "storageBucket": "usina-rd-solar.firebasestorage.app",
-  "messagingSenderId": "509541158775",
-  "measurementId": ""
+  "apiKey": "AIzaSyCSNzR9XIR9Z1R3wd0CFHwZacJzcomkP9g",
+  "authDomain": "meucalendarioonline-4d02c.firebaseapp.com",
+  "projectId": "meucalendarioonline-4d02c",
+  "storageBucket": "meucalendarioonline-4d02c.firebasestorage.app",
+  "messagingSenderId": "1072312318914",
+  "appId": "1:1072312318914:web:f7120134c007a0900cf45b",
+  "measurementId": "G-MD6LVVQMGM"
 }

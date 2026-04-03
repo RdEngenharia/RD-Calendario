@@ -162,14 +162,18 @@ export default function App() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    console.log(`Attempting ${authMode} for ${email}`);
     try {
       if (authMode === 'login') {
-        await signInWithEmailAndPassword(auth, email, password);
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        console.log("Login success:", result.user.uid);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        console.log("Signup success:", result.user.uid);
       }
       setIsAuthModalOpen(false);
     } catch (err: any) {
+      console.error("Auth Error:", err.code, err.message);
       setError(err.message);
     }
   };
