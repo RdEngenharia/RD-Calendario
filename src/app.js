@@ -27,6 +27,7 @@ let selectedDate = new Date();
 let events = [];
 let authMode = 'login';
 let currentEventId = null;
+let notificationShown = false;
 
 // --- Elementos DOM ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -61,6 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const pdfLink = document.getElementById('pdf-link');
     const uploadProgress = document.getElementById('upload-progress');
     const selectedDateText = document.getElementById('selected-date-text');
+    const notificationModal = document.getElementById('notification-modal');
+    const btnCloseNotification = document.getElementById('btn-close-notification');
     const closeModalBtns = document.querySelectorAll('.close-modal, .modal-overlay');
 
     // --- Autenticação ---
@@ -237,7 +240,20 @@ document.addEventListener('DOMContentLoaded', () => {
         onSnapshot(q, (snap) => {
             events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             renderCalendar();
+            checkTodayEvents();
         });
+    }
+
+    function checkTodayEvents() {
+        if (notificationShown) return;
+        
+        const todayStr = new Date().toISOString().split('T')[0];
+        const hasEventsToday = events.some(e => e.date === todayStr);
+        
+        if (hasEventsToday && notificationModal) {
+            notificationModal.classList.remove('hidden');
+            notificationShown = true;
+        }
     }
 
     // --- Eventos de UI ---
@@ -251,6 +267,12 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(today);
     };
     
+    if (btnCloseNotification) {
+        btnCloseNotification.onclick = () => {
+            if (notificationModal) notificationModal.classList.add('hidden');
+        };
+    }
+
     if (btnDeleteEvent) {
         btnDeleteEvent.onclick = async () => {
             if (!currentEventId || !confirm("Tem certeza que deseja excluir este evento?")) return;
