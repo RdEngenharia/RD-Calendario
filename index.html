@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RD Calendário</title>
-    <link rel="stylesheet" href="/src/style.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563eb">
     <link rel="icon" href="https://picsum.photos/seed/calendar/32/32">
-    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
     
@@ -41,7 +39,10 @@
         <header class="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-10">
             <div class="max-w-7xl mx-auto flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <span class="text-xl font-black text-blue-600 tracking-tighter">RD Calendário</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="text-xl font-black text-slate-800 tracking-tighter">Meu Calendário</span>
                 </div>
                 <div class="flex items-center gap-4">
                     <span id="user-display" class="hidden sm:inline text-sm font-medium text-slate-600"></span>
@@ -55,6 +56,23 @@
         </header>
 
         <main class="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6">
+            <!-- Barra de Busca - Garantindo Visibilidade -->
+            <div class="relative mb-8 z-20">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input type="text" id="campoBusca" class="w-full pl-11 pr-4 py-4 bg-white border-2 border-blue-100 rounded-2xl shadow-lg focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium" placeholder="Pesquisar hóspede ou reserva...">
+                </div>
+                
+                <!-- Resultados da Busca -->
+                <div id="search-results" class="hidden absolute z-30 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto border-t-4 border-t-blue-600">
+                    <!-- Resultados via JS -->
+                </div>
+            </div>
+
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div class="flex items-center gap-4">
                     <h2 id="month-year" class="text-2xl font-bold text-slate-800 min-w-[180px]">Janeiro 2024</h2>
@@ -107,6 +125,10 @@
                     <label class="block text-sm font-bold text-slate-700 mb-1">Hora</label>
                     <input type="time" id="event-time" required class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
                 </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Descrição / Nº Reserva</label>
+                    <textarea id="event-description" rows="2" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Ex: Reserva #12345 ou detalhes do hóspede"></textarea>
+                </div>
                 <div id="pdf-upload-container">
                     <label class="block text-sm font-bold text-slate-700 mb-1">Anexo PDF (Opcional)</label>
                     <input type="file" id="event-pdf" accept="application/pdf" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all">
@@ -122,6 +144,9 @@
                     <div class="bg-blue-600 h-1.5 rounded-full animate-pulse" style="width: 100%"></div>
                 </div>
                 <div class="flex gap-3 pt-4">
+                    <button type="button" id="btn-delete-event" class="hidden px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
                     <button type="button" class="flex-1 px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-all close-modal">Cancelar</button>
                     <button type="submit" id="btn-save-event" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95">Salvar</button>
                 </div>
