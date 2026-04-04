@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchResults = document.getElementById('search-results');
     const eventModal = document.getElementById('event-modal');
     const eventForm = document.getElementById('event-form');
+    const eventDateInput = document.getElementById('event-date');
     const eventTitleInput = document.getElementById('event-title');
     const eventTimeInput = document.getElementById('event-time');
     const eventDescriptionInput = document.getElementById('event-description');
@@ -141,20 +142,50 @@ document.addEventListener('DOMContentLoaded', () => {
         dayDiv.innerHTML = `
             <div class="flex items-center justify-between mb-1">
                 <span class="text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white' : ''}">${day}</span>
+                <button class="add-event-btn opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 rounded-full transition-all text-slate-400 hover:text-blue-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                </button>
             </div>
-            <div class="space-y-1 overflow-y-auto max-h-[60px]" id="ev-${dateStr}"></div>
+            <div class="space-y-1 overflow-y-auto max-h-[80px]" id="ev-${dateStr}"></div>
         `;
+        
+        dayDiv.classList.add('group'); // Add group class for hover effect on button
 
         const container = dayDiv.querySelector(`#ev-${dateStr}`);
-        events.filter(e => e.date === dateStr).forEach(event => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const dayEvents = events.filter(e => e.date === dateStr);
+        const evDate = new Date(dateStr + 'T00:00:00');
+        const isPast = evDate < today;
+
+        if (dayEvents.length > 0) {
+            if (isPast) {
+                dayDiv.classList.add('bg-orange-100/50');
+                dayDiv.classList.remove('hover:bg-blue-50/30');
+                dayDiv.classList.add('hover:bg-orange-100/80');
+            } else {
+                dayDiv.classList.add('bg-green-100/50');
+                dayDiv.classList.remove('hover:bg-blue-50/30');
+                dayDiv.classList.add('hover:bg-green-100/80');
+            }
+        }
+
+        dayEvents.forEach(event => {
             const evEl = document.createElement('div');
-            evEl.className = 'text-[10px] p-1 bg-blue-50 text-blue-700 rounded border border-blue-100 truncate flex items-center gap-1';
+            const colorClass = isPast 
+                ? 'bg-orange-600 text-white border-orange-700' 
+                : 'bg-green-600 text-white border-green-700';
+            
+            evEl.className = `text-[10px] p-1 rounded border truncate flex items-center gap-1 shadow-sm font-medium ${colorClass}`;
             evEl.innerHTML = `${event.pdfUrl ? '📄' : ''} <span>${event.time || ''} ${event.title}</span>`;
             evEl.onclick = (e) => { e.stopPropagation(); openModal(date, event); };
             container.appendChild(evEl);
         });
 
         dayDiv.onclick = () => openModal(date);
+        const addBtn = dayDiv.querySelector('.add-event-btn');
+        if (addBtn) addBtn.onclick = (e) => { e.stopPropagation(); openModal(date); };
         if (calendarGrid) calendarGrid.appendChild(dayDiv);
     }
 
@@ -163,6 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEventId = event ? event.id : null;
         const modalTitle = document.querySelector('#event-modal h3');
         if (modalTitle) modalTitle.textContent = event ? 'Editar Evento' : 'Novo Evento';
+        
+        if (eventDateInput) {
+            const dateStr = date.toISOString().split('T')[0];
+            eventDateInput.value = dateStr;
+        }
         
         if (selectedDateText) selectedDateText.textContent = date.toLocaleDateString('pt-BR', { dateStyle: 'full' });
         if (eventForm) eventForm.reset();
@@ -238,6 +274,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeModalBtns.forEach(b => b.onclick = () => { if (eventModal) eventModal.classList.add('hidden'); });
 
+    if (eventDateInput) {
+        eventDateInput.onchange = (e) => {
+            const newDate = new Date(e.target.value + 'T00:00:00');
+            if (selectedDateText) selectedDateText.textContent = newDate.toLocaleDateString('pt-BR', { dateStyle: 'full' });
+        };
+    }
+
     if (eventForm) {
         eventForm.onsubmit = async (e) => {
             e.preventDefault();
@@ -261,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: eventTitleInput.value,
                     time: eventTimeInput.value,
                     description: eventDescriptionInput ? eventDescriptionInput.value : '',
-                    date: selectedDate.toISOString().split('T')[0],
+                    date: eventDateInput ? eventDateInput.value : selectedDate.toISOString().split('T')[0],
                     userId: currentUser.uid,
                     pdfUrl: pdfUrl,
                     updatedAt: serverTimestamp()
@@ -301,11 +344,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (filtered.length === 0) {
                     searchResults.innerHTML = '<div class="p-4 text-slate-500 text-sm text-center">Nenhum resultado encontrado</div>';
                 } else {
-                    searchResults.innerHTML = filtered.map(event => `
-                        <div class="p-4 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors" onclick="window.openSearchResult('${event.id}')">
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    searchResults.innerHTML = filtered.map(event => {
+                        const evDate = new Date(event.date + 'T00:00:00');
+                        const isPast = evDate < today;
+                        const colorClass = isPast ? 'bg-orange-50/50' : 'bg-green-50/50';
+                        const badgeClass = isPast ? 'bg-orange-600 text-white' : 'bg-green-600 text-white';
+
+                        return `
+                        <div class="p-4 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors ${colorClass}" onclick="window.openSearchResult('${event.id}')">
                             <div class="flex items-center justify-between mb-1">
                                 <span class="font-bold text-slate-800">${event.title}</span>
-                                <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">${event.date.split('-').reverse().join('/')}</span>
+                                <span class="text-[10px] ${badgeClass} px-2 py-0.5 rounded-full font-bold">${event.date.split('-').reverse().join('/')}</span>
                             </div>
                             <div class="flex items-center gap-3 text-xs text-slate-500">
                                 <span class="flex items-center gap-1">
@@ -320,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             ${event.description ? `<div class="mt-1 text-[10px] text-slate-400 truncate">${event.description}</div>` : ''}
                         </div>
-                    `).join('');
+                    `; }).join('');
                 }
                 searchResults.classList.remove('hidden');
             }
