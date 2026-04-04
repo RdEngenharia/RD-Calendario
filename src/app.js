@@ -244,7 +244,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (prevMonthBtn) prevMonthBtn.onclick = () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendar(); };
     if (nextMonthBtn) nextMonthBtn.onclick = () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendar(); };
     if (todayBtn) todayBtn.onclick = () => { currentViewDate = new Date(); renderCalendar(); };
-    if (btnNewEvent) btnNewEvent.onclick = () => openModal(new Date());
+    if (btnNewEvent) btnNewEvent.onclick = () => {
+        const now = new Date();
+        // Garantindo que usamos a data local correta
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        openModal(today);
+    };
     
     if (btnDeleteEvent) {
         btnDeleteEvent.onclick = async () => {
