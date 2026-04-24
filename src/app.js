@@ -25,9 +25,13 @@ let currentUser = null;
 let currentViewDate = new Date();
 let selectedDate = new Date();
 let events = [];
+let notes = [];
+let noteSearchQuery = '';
 let authMode = 'login';
 let currentEventId = null;
+let currentNoteId = null;
 let notificationShown = false;
+const noteColors = ['#FFF9C4', '#F1F8E9', '#E3F2FD', '#FCE4EC', '#F3E5F5', '#E0F7FA', '#FFF3E0'];
 
 // --- Elementos DOM ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,6 +70,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCloseNotification = document.getElementById('btn-close-notification');
     const closeModalBtns = document.querySelectorAll('.close-modal, .modal-overlay');
 
+    // Elementos do Bloco de Notas
+    const tabCalendar = document.getElementById('tab-calendar');
+    const tabNotes = document.getElementById('tab-notes');
+    const sectionCalendar = document.getElementById('section-calendar');
+    const sectionNotes = document.getElementById('section-notes');
+    const noteDateInput = document.getElementById('note-date');
+    const noteContentInput = document.getElementById('note-content');
+    const btnSaveNote = document.getElementById('btn-save-note');
+    const notesGrid = document.getElementById('notes-grid');
+    const searchNotesInput = document.getElementById('search-notes');
+
+    if (noteDateInput) noteDateInput.valueAsDate = new Date();
+
     // --- Autenticação ---
     onAuthStateChanged(auth, (user) => {
         if (user) {
@@ -74,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loginScreen) loginScreen.classList.add('hidden');
             if (calendarScreen) calendarScreen.classList.remove('hidden');
             loadEvents();
+            loadNotes();
         } else {
             currentUser = null;
             if (loginScreen) loginScreen.classList.remove('hidden');
@@ -244,6 +262,112 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function loadNotes() {
+        if (!currentUser) return;
+        const q = query(collection(db, "notes"), where("userId", "==", currentUser.uid));
+        onSnapshot(q, (snap) => {
+            notes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            renderNotes();
+        });
+    }
+
+    function renderNotes() {
+        if (!notesGrid) return;
+        notesGrid.innerHTML = '';
+
+        const filtered = notes.filter(n => n.content.toLowerCase().includes(noteSearchQuery.toLowerCase()));
+        
+        // Ordenar por data (mais recente primeiro)
+        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        filtered.forEach(note => {
+            const card = document.createElement('div');
+            card.className = 'group p-6 rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-xl hover:-translate-y-1 flex flex-col min-h-[180px]';
+            card.style.backgroundColor = note.color || '#F1F8E9';
+
+            const displayDate = new Date(note.date + 'T00:00:00').toLocaleDateString('pt-BR');
+
+            card.innerHTML = `
+                <div class="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-3 opacity-60">${displayDate}</div>
+                <div class="flex-1 text-slate-800 font-medium leading-relaxed whitespace-pre-wrap mb-4">${note.content}</div>
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="btn-edit-note text-blue-600 hover:text-blue-800 text-xs font-bold uppercase tracking-wider" data-id="${note.id}">Editar</button>
+                    <button class="btn-delete-note text-red-600 hover:text-red-800 text-xs font-bold uppercase tracking-wider" data-id="${note.id}">Excluir</button>
+                </div>
+            `;
+
+            const btnEdit = card.querySelector('.btn-edit-note');
+            const btnDelete = card.querySelector('.btn-delete-note');
+
+            btnEdit.onclick = () => editNote(note.id);
+            btnDelete.onclick = () => deleteNote(note.id);
+
+            notesGrid.appendChild(card);
+        });
+    }
+
+    async function saveNote() {
+        if (!currentUser || !noteContentInput || !noteDateInput) return;
+        const content = noteContentInput.value.trim();
+        const date = noteDateInput.value;
+
+        if (!content) {
+            alert("O conteúdo da nota não pode estar vazio!");
+            return;
+        }
+
+        try {
+            if (currentNoteId) {
+                // Atualizar nota existente
+                await updateDoc(doc(db, "notes", currentNoteId), {
+                    content,
+                    date,
+                    updatedAt: serverTimestamp()
+                });
+                currentNoteId = null;
+                if (btnSaveNote) btnSaveNote.textContent = "Salvar Nota";
+            } else {
+                // Criar nova nota
+                const randomColor = noteColors[Math.floor(Math.random() * noteColors.length)];
+                await addDoc(collection(db, "notes"), {
+                    userId: currentUser.uid,
+                    content,
+                    date,
+                    color: randomColor,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
+            }
+            noteContentInput.value = '';
+            noteDateInput.valueAsDate = new Date();
+        } catch (error) {
+            console.error("Erro ao salvar nota:", error);
+            alert("Erro ao salvar nota. Tente novamente.");
+        }
+    }
+
+    async function deleteNote(id) {
+        if (!confirm("Deseja realmente excluir esta nota?")) return;
+        try {
+            await deleteDoc(doc(db, "notes", id));
+        } catch (error) {
+            console.error("Erro ao excluir nota:", error);
+        }
+    }
+
+    function editNote(id) {
+        const note = notes.find(n => n.id === id);
+        if (!note || !noteContentInput || !noteDateInput || !btnSaveNote) return;
+
+        noteContentInput.value = note.content;
+        noteDateInput.value = note.date;
+        currentNoteId = id;
+        btnSaveNote.textContent = "Atualizar Nota";
+        
+        // Scroll para o topo para facilitar a edição
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     function checkTodayEvents() {
         if (notificationShown) return;
         
@@ -260,6 +384,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (prevMonthBtn) prevMonthBtn.onclick = () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendar(); };
     if (nextMonthBtn) nextMonthBtn.onclick = () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendar(); };
     if (todayBtn) todayBtn.onclick = () => { currentViewDate = new Date(); renderCalendar(); };
+
+    // --- Listeners do Bloco de Notas ---
+    if (tabCalendar && tabNotes && sectionCalendar && sectionNotes) {
+        tabCalendar.onclick = () => {
+            sectionCalendar.classList.remove('hidden');
+            sectionNotes.classList.add('hidden');
+            tabCalendar.className = 'px-6 py-2 rounded-lg text-sm font-bold transition-all bg-white text-blue-600 shadow-sm';
+            tabNotes.className = 'px-6 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-700';
+        };
+
+        tabNotes.onclick = () => {
+            sectionCalendar.classList.add('hidden');
+            sectionNotes.classList.remove('hidden');
+            tabNotes.className = 'px-6 py-2 rounded-lg text-sm font-bold transition-all bg-white text-blue-600 shadow-sm';
+            tabCalendar.className = 'px-6 py-2 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-700';
+            renderNotes();
+        };
+    }
+
+    if (btnSaveNote) {
+        btnSaveNote.onclick = saveNote;
+    }
+
+    if (searchNotesInput) {
+        searchNotesInput.oninput = (e) => {
+            noteSearchQuery = e.target.value;
+            renderNotes();
+        };
+    }
     if (btnNewEvent) btnNewEvent.onclick = () => {
         const now = new Date();
         // Garantindo que usamos a data local correta
